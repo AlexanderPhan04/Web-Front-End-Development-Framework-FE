@@ -9,6 +9,8 @@ Frontend application for a simple blog system built with React, Vite, React Rout
 - React Router DOM
 - Axios
 - Zustand
+- React Hook Form
+- Zod
 - React Hot Toast
 - Tailwind CSS
 
@@ -30,7 +32,7 @@ Frontend application for a simple blog system built with React, Vite, React Rout
 - Like and unlike post
 - Create comment
 - Delete comment
-- Profile page
+- Profile page with current user posts
 
 ## Project Structure
 
@@ -47,6 +49,7 @@ src/
     PostCard.jsx
     LoadingSpinner.jsx
     Pagination.jsx
+    ErrorBoundary.jsx
   pages/
     HomePage.jsx
     PostDetailPage.jsx
@@ -59,7 +62,9 @@ src/
   store/
     authStore.js
   schemas/
-  utils/
+    auth.schema.js
+    post.schema.js
+    comment.schema.js
   App.jsx
   main.jsx
   index.css
@@ -178,7 +183,8 @@ Authorization: Bearer <token>
 ### Profile Page
 
 - Display current user information
-- Display authentication token
+- Display posts created by current user
+- Edit or delete owned posts
 - Link to create new post
 
 ## Notes

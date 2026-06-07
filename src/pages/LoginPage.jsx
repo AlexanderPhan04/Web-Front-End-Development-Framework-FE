@@ -1,29 +1,29 @@
-import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import toast from "react-hot-toast";
+
 import useAuthStore from "../store/authStore";
+import { loginSchema } from "../schemas/auth.schema";
 
 function LoginPage() {
   const navigate = useNavigate();
   const { login, loading } = useAuthStore();
-
-  const [formData, setFormData] = useState({
-    email: "info@alexanderphan.dev",
-    password: "password",
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
   });
 
-  const handleChange = (e) => {
-    setFormData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
+  const onSubmit = async (data) => {
     try {
-      await login(formData);
+      await login(data);
       toast.success("Login successfully");
       navigate("/");
     } catch (error) {
@@ -35,17 +35,18 @@ function LoginPage() {
     <div className="mx-auto max-w-md rounded-xl bg-white p-6 shadow">
       <h1 className="mb-6 text-2xl font-bold">Login</h1>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
           <label className="mb-1 block text-sm font-medium">Email</label>
           <input
             className="w-full rounded-lg border px-3 py-2 outline-none focus:border-slate-900"
             type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
             placeholder="Enter email"
+            {...register("email")}
           />
+          {errors.email && (
+            <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+          )}
         </div>
 
         <div>
@@ -53,11 +54,14 @@ function LoginPage() {
           <input
             className="w-full rounded-lg border px-3 py-2 outline-none focus:border-slate-900"
             type="password"
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
             placeholder="Enter password"
+            {...register("password")}
           />
+          {errors.password && (
+            <p className="mt-1 text-sm text-red-600">
+              {errors.password.message}
+            </p>
+          )}
         </div>
 
         <button

@@ -1,11 +1,14 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import toast from "react-hot-toast";
 
 import { postApi } from "../api/postApi";
 import { commentApi } from "../api/commentApi";
 import useAuthStore from "../store/authStore";
 import LoadingSpinner from "../components/LoadingSpinner";
+import { commentSchema } from "../schemas/comment.schema";
 
 function PostDetailPage() {
   const { id } = useParams();
@@ -15,11 +18,25 @@ function PostDetailPage() {
 
   const [post, setPost] = useState(null);
   const [comments, setComments] = useState([]);
-  const [commentContent, setCommentContent] = useState("");
   const [loading, setLoading] = useState(false);
+  const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentLoading, setCommentLoading] = useState(false);
+  const [likeLoading, setLikeLoading] = useState(false);
+  const [deletePostLoading, setDeletePostLoading] = useState(false);
+  const [deletingCommentId, setDeletingCommentId] = useState(null);
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(commentSchema),
+    defaultValues: {
+      content: "",
+    },
+  });
 
-  const fetchPost = async () => {
+  const fetchPost = useCallback(async () => {
     setLoading(true);
 
     try {
@@ -31,62 +48,61 @@ function PostDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, navigate]);
 
-  const fetchComments = async () => {
+  const fetchComments = useCallback(async () => {
+    setCommentsLoading(true);
+
     try {
       const res = await commentApi.getCommentsByPost(id);
       setComments(res.data.comments || []);
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to load comments");
+    } finally {
+      setCommentsLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     fetchPost();
     fetchComments();
-  }, [id]);
+  }, [fetchPost, fetchComments]);
 
-const handleToggleLike = async () => {
-  if (!user) {
-    toast.error("Please login to like this post");
-    navigate("/login");
-    return;
-  }
+  const handleToggleLike = async () => {
+    if (!user) {
+      toast.error("Please login to like this post");
+      navigate("/login");
+      return;
+    }
 
-  try {
-    const res = await postApi.toggleLike(id);
+    setLikeLoading(true);
 
-    toast.success(res.data.message || "Updated like");
+    try {
+      const res = await postApi.toggleLike(id);
 
-    await fetchPost();
-  } catch (error) {
-    toast.error(error.response?.data?.message || "Like failed");
-  }
-};
+      toast.success(res.data.message || "Updated like");
 
-  const handleCreateComment = async (e) => {
-    e.preventDefault();
+      await fetchPost();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Like failed");
+    } finally {
+      setLikeLoading(false);
+    }
+  };
 
+  const handleCreateComment = async (data) => {
     if (!user) {
       toast.error("Please login to comment");
       navigate("/login");
       return;
     }
 
-    if (!commentContent.trim()) {
-      toast.error("Comment is required");
-      return;
-    }
-
     setCommentLoading(true);
 
     try {
-      await commentApi.createComment(id, {
-        content: commentContent,
-      });
+      await commentApi.createComment(id, data);
 
-      setCommentContent("");
+      reset();
       toast.success("Comment created");
       fetchComments();
     } catch (error) {
@@ -101,12 +117,16 @@ const handleToggleLike = async () => {
 
     if (!confirmed) return;
 
+    setDeletingCommentId(commentId);
+
     try {
       await commentApi.deleteComment(commentId);
       toast.success("Comment deleted");
       fetchComments();
     } catch (error) {
       toast.error(error.response?.data?.message || "Delete comment failed");
+    } finally {
+      setDeletingCommentId(null);
     }
   };
 
@@ -115,12 +135,16 @@ const handleToggleLike = async () => {
 
     if (!confirmed) return;
 
+    setDeletePostLoading(true);
+
     try {
       await postApi.deletePost(id);
       toast.success("Post deleted");
       navigate("/");
     } catch (error) {
       toast.error(error.response?.data?.message || "Delete post failed");
+    } finally {
+      setDeletePostLoading(false);
     }
   };
 
@@ -161,9 +185,10 @@ const handleToggleLike = async () => {
         <div className="mt-6 flex items-center justify-between border-t pt-4">
           <button
             onClick={handleToggleLike}
-            className="rounded-lg bg-slate-900 px-4 py-2 text-white"
+            disabled={likeLoading}
+            className="rounded-lg bg-slate-900 px-4 py-2 text-white disabled:opacity-60"
           >
-            Like ({likeCount})
+            {likeLoading ? "Updating..." : `Like (${likeCount})`}
           </button>
 
           {isOwner && (
@@ -177,9 +202,10 @@ const handleToggleLike = async () => {
 
               <button
                 onClick={handleDeletePost}
-                className="rounded-lg bg-red-600 px-4 py-2 text-white"
+                disabled={deletePostLoading}
+                className="rounded-lg bg-red-600 px-4 py-2 text-white disabled:opacity-60"
               >
-                Delete
+                {deletePostLoading ? "Deleting..." : "Delete"}
               </button>
             </div>
           )}
@@ -189,13 +215,18 @@ const handleToggleLike = async () => {
       <section className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
         <h2 className="mb-4 text-xl font-bold">Comments</h2>
 
-        <form onSubmit={handleCreateComment} className="mb-6 space-y-3">
+        <form
+          onSubmit={handleSubmit(handleCreateComment)}
+          className="mb-6 space-y-3"
+        >
           <textarea
             className="min-h-24 w-full rounded-lg border px-3 py-2 outline-none focus:border-slate-900"
             placeholder="Write a comment..."
-            value={commentContent}
-            onChange={(e) => setCommentContent(e.target.value)}
+            {...register("content")}
           />
+          {errors.content && (
+            <p className="text-sm text-red-600">{errors.content.message}</p>
+          )}
 
           <button
             disabled={commentLoading}
@@ -205,7 +236,9 @@ const handleToggleLike = async () => {
           </button>
         </form>
 
-        {comments.length === 0 ? (
+        {commentsLoading ? (
+          <LoadingSpinner />
+        ) : comments.length === 0 ? (
           <p className="text-slate-500">No comments yet.</p>
         ) : (
           <div className="space-y-3">
@@ -225,9 +258,12 @@ const handleToggleLike = async () => {
                     {canDeleteComment && (
                       <button
                         onClick={() => handleDeleteComment(comment._id)}
-                        className="text-sm text-red-600"
+                        disabled={deletingCommentId === comment._id}
+                        className="text-sm text-red-600 disabled:opacity-60"
                       >
-                        Delete
+                        {deletingCommentId === comment._id
+                          ? "Deleting..."
+                          : "Delete"}
                       </button>
                     )}
                   </div>
