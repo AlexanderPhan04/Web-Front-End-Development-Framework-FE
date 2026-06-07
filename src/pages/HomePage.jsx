@@ -47,12 +47,51 @@ function HomePage() {
 
   return (
     <div>
-      <section className="mb-8 rounded-2xl bg-white p-6 shadow-sm">
-        <h1 className="mb-2 text-3xl font-bold">Blog Posts</h1>
-        <p className="text-slate-600">
-          Read, search and manage posts from the blog system.
-        </p>
-      </section>
+      <section className="mb-8 overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 to-slate-700 p-8 text-white shadow-sm">
+  <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-blue-300">
+    Blog Management
+  </p>
+
+  <h1 className="mb-3 text-4xl font-black tracking-tight md:text-5xl">
+    Blog Posts
+  </h1>
+
+  <p className="max-w-2xl text-slate-300">
+    Read, search, create and manage posts from the blog system.
+  </p>
+</section>
+
+<section className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+  <div className="flex flex-col gap-3 md:flex-row">
+    <form onSubmit={handleSearchSubmit} className="flex flex-1 gap-2">
+      <input
+        className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
+        placeholder="Search posts..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+
+      <button className="rounded-xl bg-slate-900 px-5 py-3 font-medium text-white transition hover:bg-slate-700">
+        Search
+      </button>
+    </form>
+
+    <select
+      className="rounded-xl border border-slate-200 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
+      value={category}
+      onChange={(e) => {
+        setPage(1);
+        setCategory(e.target.value);
+      }}
+    >
+      <option value="">All categories</option>
+      <option value="Technology">Technology</option>
+      <option value="Travel">Travel</option>
+      <option value="Education">Education</option>
+      <option value="Lifestyle">Lifestyle</option>
+    </select>
+  </div>
+</section>
 
       <section className="mb-6 flex flex-col gap-3 rounded-xl bg-white p-4 shadow-sm md:flex-row">
         <form onSubmit={handleSearchSubmit} className="flex flex-1 gap-2">
