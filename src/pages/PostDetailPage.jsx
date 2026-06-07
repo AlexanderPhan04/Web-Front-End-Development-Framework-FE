@@ -47,21 +47,23 @@ function PostDetailPage() {
     fetchComments();
   }, [id]);
 
-  const handleToggleLike = async () => {
-    if (!user) {
-      toast.error("Please login to like this post");
-      navigate("/login");
-      return;
-    }
+const handleToggleLike = async () => {
+  if (!user) {
+    toast.error("Please login to like this post");
+    navigate("/login");
+    return;
+  }
 
-    try {
-      const res = await postApi.toggleLike(id);
-      setPost(res.data.post);
-      toast.success(res.data.message || "Updated like");
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Like failed");
-    }
-  };
+  try {
+    const res = await postApi.toggleLike(id);
+
+    toast.success(res.data.message || "Updated like");
+
+    await fetchPost();
+  } catch (error) {
+    toast.error(error.response?.data?.message || "Like failed");
+  }
+};
 
   const handleCreateComment = async (e) => {
     e.preventDefault();
